@@ -147,6 +147,10 @@ makes sessions wait on each other inside one TCP stream.
 
 Three modes, switchable from the toolbar while connected, like Remmina:
 
+- **Dynamic full screen**, only as a choice in the connection: dynamic
+  resolution that goes to full screen just before it connects, so the remote
+  desktop starts at the screen's size. A reconnect does not force full screen
+  again.
 - **Dynamic resolution** (default): when the tab area changes size (window
   resize, maximize, full screen, moving to another monitor) the remote
   desktop is resized to match with `UpdateSessionDisplaySettings`, debounced
