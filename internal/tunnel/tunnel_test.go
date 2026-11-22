@@ -205,7 +205,28 @@ func TestStats(t *testing.T) {
 	}
 }
 
+// shortBusyWait makes a busy tunnel refuse quickly for the test.
+func shortBusyWait(t *testing.T) {
+	old := busyWait
+	busyWait = 30 * time.Millisecond
+	t.Cleanup(func() { busyWait = old })
+}
+
+// The control opens its next connection just before it closes the last one.
+func TestNextConnectionWaitsForTheLast(t *testing.T) {
+	tun, _ := open(t)
+	first := connect(t, tun)
+	echo(t, first, []byte("one"))
+	second := connect(t, tun)
+	time.AfterFunc(20*time.Millisecond, func() { first.Close() })
+	echo(t, second, []byte("two"))
+	if s := tun.Stats(); s.Refused != 0 || s.Conns != 2 || s.Active != 1 {
+		t.Fatalf("stats %+v", s)
+	}
+}
+
 func TestOneConnectionAtATime(t *testing.T) {
+	shortBusyWait(t)
 	tun, _ := open(t)
 	first := connect(t, tun)
 	echo(t, first, []byte("one"))

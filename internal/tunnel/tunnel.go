@@ -281,20 +281,55 @@ func (t *Tunnel) acceptLoop() {
 			}
 			continue
 		}
-		d, reason := t.admit(conn)
-		if reason != "" {
+		d, reason := t.admit(conn, false)
+		t.wg.Add(1)
+		switch reason {
+		case "":
+			go t.serve(conn, d)
+		case reasonBusy:
+			go t.admitLater(conn)
+		default:
+			t.wg.Done()
 			slog.Warn("tunnel connection refused", "listen", t.Addr(), "reason", reason)
 			refuse(conn)
-			continue
 		}
-		t.wg.Add(1)
-		go t.serve(conn, d)
+	}
+}
+
+// reasonBusy refuses a connection because another one is open.
+const reasonBusy = "busy"
+
+// busyWait is how long a new connection waits for the open one to end. The
+// RDP control opens its next connection a few milliseconds before it closes
+// the last one: after it has checked the server's certificate on a first
+// connection, it logs in on a second.
+var busyWait = 2 * time.Second
+
+// admitLater serves a connection that arrived while another one was open,
+// as soon as that one has ended, or refuses it when it stays.
+func (t *Tunnel) admitLater(conn *net.TCPConn) {
+	end := time.Now().Add(busyWait)
+	for {
+		last := !time.Now().Before(end) || t.ctx.Err() != nil
+		d, reason := t.admit(conn, last)
+		if reason == "" {
+			t.serve(conn, d)
+			return
+		}
+		if last || reason != reasonBusy {
+			t.wg.Done()
+			slog.Warn("tunnel connection refused", "listen", t.Addr(), "reason", reason)
+			refuse(conn)
+			return
+		}
+		time.Sleep(2 * time.Millisecond)
 	}
 }
 
 // admit decides whether an accepted connection may use the tunnel. It
-// returns the dialer to use, or the reason for refusing.
-func (t *Tunnel) admit(conn *net.TCPConn) (Dialer, string) {
+// returns the dialer to use, or the reason for refusing. A busy tunnel only
+// counts as a refusal when final: the caller tries again otherwise.
+func (t *Tunnel) admit(conn *net.TCPConn, final bool) (Dialer, string) {
 	reason := ""
 	if !t.opts.AnyProcess {
 		peer, _ := conn.RemoteAddr().(*net.TCPAddr)
@@ -312,7 +347,10 @@ func (t *Tunnel) admit(conn *net.TCPConn) (Dialer, string) {
 	case !t.accepting:
 		reason = "not accepting"
 	case t.busy > 0:
-		reason = "busy"
+		reason = reasonBusy
+		if !final {
+			return nil, reason
+		}
 	}
 	if reason != "" {
 		t.refused++

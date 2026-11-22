@@ -88,7 +88,10 @@ makes sessions wait on each other inside one TCP stream.
   back to `127.0.0.1` with a random port.
 - The listener accepts while the SSH connection is up (the control reconnects
   by itself on the same port) and refuses while it is down, one connection at
-  a time. On Windows the peer's process ID is checked
+  a time. A connection that arrives while another is open waits up to two
+  seconds for that one to end: with the certificate check on, the control
+  checks the certificate on a first connection and opens the one it logs in
+  on a few milliseconds before closing the first. On Windows the peer's process ID is checked
   (`GetExtendedTcpTable`) so only srdp4win itself can use the tunnel; other
   local users and programs are refused. Under Wine this check is skipped when
   the API is missing.
