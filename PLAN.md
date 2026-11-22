@@ -190,8 +190,8 @@ Three modes, switchable from the toolbar while connected, like Remmina:
   start tab. Nothing connects by itself. It is a list with name, group, SSH
   host, RDP host and last used time, and a search box. Double-click or Enter
   connects in a new tab; New, Edit, Copy and Delete in a toolbar and the
-  right-click menu. The + button on the tab strip brings it back to open
-  another session.
+  right-click menu. Its tab is always the first one: click it (or Ctrl+T)
+  to open another session. There is no + button.
 - A connection has a stable ID and four groups of fields:
   - **General**: name, group.
   - **SSH host**: address, port (22), user, authentication. Required.
@@ -219,10 +219,10 @@ Three modes, switchable from the toolbar while connected, like Remmina:
 ## Main window
 
 - ssh-cloud's shell: rounded window, Mica title bar, tab strip (one tab per
-  session plus the connection manager's start tab and a + button), session toolbar row, content
+  session after the connection manager's start tab), session toolbar row, content
   area, status line (state on the left: "Connecting to SSH", "Opening tunnel",
   "Connected", "Reconnecting"; remote size and resize mode on the right).
-- Ctrl+T new tab, Ctrl+W close (asks when the session is connected),
+- Ctrl+T to the connection manager, Ctrl+W close (asks when the session is connected),
   Ctrl+Tab switch. These only work while the focus is in our chrome; inside
   the session the keys belong to the remote desktop.
 - Closing the window with sessions open asks once.

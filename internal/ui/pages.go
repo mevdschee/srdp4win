@@ -165,14 +165,13 @@ func (me *mainWindow) tabEvents() {
 		}
 	}
 	me.tabs.onClose = me.closeTab
-	me.tabs.onNew = func() { me.activate(0) }
 	me.tabs.onMenu = func(i int) {
 		isSession := i > 0 && i < len(me.pages)
 		items := []menuItem{
 			{id: mnuTabClose, text: "&Close tab\tCtrl+W", enabled: isSession},
 			{id: mnuTabCloseOthers, text: "Close &other tabs", enabled: isSession && len(me.pages) > 2},
 			{},
-			{id: mnuTabNew, text: "&New tab\tCtrl+T", enabled: true},
+			{id: mnuTabNew, text: "C&onnections\tCtrl+T", enabled: true},
 		}
 		switch popupMenu(me.wnd.Hwnd(), items) {
 		case mnuTabClose:

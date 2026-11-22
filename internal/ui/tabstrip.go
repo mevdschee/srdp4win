@@ -4,7 +4,7 @@ package ui
 
 // tabStrip draws Explorer-style tabs in a band below the title bar: rounded
 // tabs with the connection name, the active tab joined to the toolbar row
-// below, a close button on the active and the hovered tab, and a + button.
+// below, a close button on the active and the hovered tab.
 // The first tabs can be fixed: narrower and without a close button (the
 // start tab). Tabs shrink when they do not fit. It is a small custom control
 // painted with GDI (double buffered).
@@ -50,21 +50,17 @@ type tabStrip struct {
 	fixed   int // leading tabs that cannot be closed
 
 	hover, hoverClose int // tab under the mouse, tab whose close button is under the mouse
-	hoverPlus         bool
 	tracking          bool
 
 	tabs   []win.RECT
 	closes []win.RECT
-	plus   win.RECT
 
-	font                uintptr
-	icons               uintptr // image list: add (at the strip's icon size)
-	smallIcons          uintptr // image list: dismiss (close button)
-	iconSize, smallSize int
+	font       uintptr
+	smallIcons uintptr // image list: dismiss (close button)
+	smallSize  int
 
 	onSelect func(i int)
 	onClose  func(i int)
-	onNew    func()
 	onMenu   func(i int) // right-click; i is -1 outside the tabs
 }
 
@@ -81,7 +77,7 @@ func newTabStrip(parent ui.Parent) *tabStrip {
 	on.WmMouseMove(func(p ui.WmMouse) { t.mouseMove(p.Pos()) })
 	on.WmMouseLeave(func() {
 		t.tracking = false
-		t.setHover(-1, -1, false)
+		t.setHover(-1, -1)
 	})
 	on.WmLButtonDown(func(p ui.WmMouse) { t.click(p.Pos()) })
 	on.WmMButtonUp(func(p ui.WmMouse) {
@@ -102,14 +98,10 @@ func newTabStrip(parent ui.Parent) *tabStrip {
 // again when the theme changes.
 func (t *tabStrip) setup(font uintptr, dpi int) {
 	t.font = font
-	t.iconSize = max(20, 20*dpi/96)
 	t.smallSize = max(16, 16*dpi/96)
-	for _, old := range []uintptr{t.icons, t.smallIcons} {
-		if old != 0 {
-			win.HIMAGELIST(old).Destroy()
-		}
+	if t.smallIcons != 0 {
+		win.HIMAGELIST(t.smallIcons).Destroy()
 	}
-	t.icons = uintptr(fluentImageList([]string{"add"}, t.iconSize, colors.icon))
 	t.smallIcons = uintptr(fluentImageList([]string{"dismiss_16"}, t.smallSize, colors.icon))
 	t.invalidate()
 }
@@ -130,12 +122,11 @@ func (t *tabStrip) measure(hdc uintptr, width, height int32) {
 	top := int32(ui.DpiY(6))
 	x := int32(ui.DpiX(8))
 	gap := int32(ui.DpiX(2))
-	ps := int32(ui.DpiX(32))
 	t.tabs, t.closes = t.tabs[:0], t.closes[:0]
 	old, _, _ := procSelectObject.Call(hdc, t.font)
 	defer procSelectObject.Call(hdc, old)
 	widths := make([]int32, len(t.names))
-	avail := width - x - ps - int32(ui.DpiX(12)) // room for the tabs
+	avail := width - x - int32(ui.DpiX(12)) // room for the tabs
 	closable := int32(0)
 	for i, name := range t.names {
 		textW := textWidth(hdc, name)
@@ -165,8 +156,6 @@ func (t *tabStrip) measure(hdc uintptr, width, height int32) {
 		t.closes = append(t.closes, c)
 		x += w + gap
 	}
-	t.plus = win.RECT{Left: x + int32(ui.DpiX(4)), Top: top + (height-top-ps)/2}
-	t.plus.Right, t.plus.Bottom = t.plus.Left+ps, t.plus.Top+ps
 }
 
 func textWidth(hdc uintptr, s string) int32 {
@@ -256,11 +245,6 @@ func (t *tabStrip) paint() {
 			procImageListDraw.Call(t.smallIcons, 0, mem, uintptr(c.Left+off), uintptr(c.Top+off), 1)
 		}
 	}
-	if t.hoverPlus {
-		roundRect(mem, t.plus, int32(ui.DpiX(4)), colors.tabHover)
-	}
-	off := (t.plus.Right - t.plus.Left - int32(t.iconSize)) / 2
-	procImageListDraw.Call(t.icons, 0, mem, uintptr(t.plus.Left+off), uintptr(t.plus.Top+off), 1)
 
 	procBitBlt.Call(hdc, 0, 0, uintptr(rc.Right), uintptr(rc.Bottom), mem, 0, 0, 0x00CC0020) // SRCCOPY
 }
@@ -304,24 +288,18 @@ func (t *tabStrip) mouseMove(pt win.POINT) {
 	if i >= t.fixed && (onClose || inRect(t.closes[i], pt)) {
 		closeIdx = i
 	}
-	t.setHover(i, closeIdx, inRect(t.plus, pt))
+	t.setHover(i, closeIdx)
 }
 
-func (t *tabStrip) setHover(i, closeIdx int, plus bool) {
-	if i != t.hover || closeIdx != t.hoverClose || plus != t.hoverPlus {
-		t.hover, t.hoverClose, t.hoverPlus = i, closeIdx, plus
+func (t *tabStrip) setHover(i, closeIdx int) {
+	if i != t.hover || closeIdx != t.hoverClose {
+		t.hover, t.hoverClose = i, closeIdx
 		t.invalidate()
 	}
 }
 
 func (t *tabStrip) click(pt win.POINT) {
 	if !t.enabled {
-		return
-	}
-	if inRect(t.plus, pt) {
-		if t.onNew != nil {
-			t.onNew()
-		}
 		return
 	}
 	i, _ := t.hit(pt)

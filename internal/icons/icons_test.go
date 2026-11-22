@@ -14,11 +14,19 @@ func TestAppIcon(t *testing.T) {
 		if img.Bounds().Dx() != size || img.Bounds().Dy() != size {
 			t.Fatalf("%dpx: bounds %v", size, img.Bounds())
 		}
-		opaque := 0
+		opaque, green := 0, 0
 		for i := 3; i < len(img.Pix); i += 4 {
 			if img.Pix[i] == 0xff {
 				opaque++
 			}
+			// The shield: without it the picture was left out by the
+			// renderer and only the blue tile remains.
+			if r, g, b := img.Pix[i-3], img.Pix[i-2], img.Pix[i-1]; g > r+40 && g > b+40 {
+				green++
+			}
+		}
+		if green == 0 {
+			t.Fatalf("%dpx: the tile is empty (no shield)", size)
 		}
 		// A rounded tile: most of it opaque, the corner transparent.
 		if opaque < size*size/2 || img.Pix[3] != 0 {
