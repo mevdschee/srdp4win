@@ -60,7 +60,7 @@ func newOptionsPanel(wnd ui.Parent, x, y int, o rdp.Options) *optionsPanel {
 		Width(ui.DpiX(half-80)).CtrlStyle(co.ES_AUTOHSCROLL|co.ES_UPPERCASE))
 	p.audio = combo(4, "Sound", int(o.Audio), "Play on this computer", "Play on the remote computer", "Off")
 	p.keys = combo(5, "Windows key combos", int(o.Keyboard), "In full screen only", "Always to the remote desktop", "Always to this computer")
-	p.resize = combo(6, "Resize mode", int(o.Resize), "Dynamic resolution", "Scaled", "Fixed size")
+	p.resize = combo(6, "Resize mode", resizeIndex(o), resizeTexts...)
 	p.sizeLabel = label(wnd, "Fixed size", lx, row(7), 136)
 	p.fixedW = number(fx, 7, 70, o.FixedWidth)
 	p.byLabel = label(wnd, "x", fx+78, row(7), 12)
@@ -87,7 +87,7 @@ func (p *optionsPanel) update() {
 	drives := p.drives.IsChecked()
 	p.letters.Hwnd().EnableWindow(drives)
 	p.lettersLabel.Hwnd().EnableWindow(drives)
-	fixed := rdp.ResizeMode(max(p.resize.SelectedIndex(), 0)) == rdp.ResizeFixed
+	fixed := resizeChoices[max(p.resize.SelectedIndex(), 0)].mode == rdp.ResizeFixed
 	p.fixedW.Hwnd().EnableWindow(fixed)
 	p.fixedH.Hwnd().EnableWindow(fixed)
 	p.sizeLabel.Hwnd().EnableWindow(fixed)
@@ -109,7 +109,8 @@ func (p *optionsPanel) read() (rdp.Options, *ui.Edit, string) {
 	o.VerifyCert = p.verify.IsChecked()
 	o.Audio = rdp.AudioMode(max(p.audio.SelectedIndex(), 0))
 	o.Keyboard = rdp.KeyboardMode(max(p.keys.SelectedIndex(), 0))
-	o.Resize = rdp.ResizeMode(max(p.resize.SelectedIndex(), 0))
+	choice := resizeChoices[max(p.resize.SelectedIndex(), 0)]
+	o.Resize, o.FullScreen = choice.mode, choice.full
 	o.Quality = rdp.Quality(max(p.quality.SelectedIndex(), 0))
 	o.ColorDepth = colorDepths[max(0, min(p.depth.SelectedIndex(), len(colorDepths)-1))]
 
@@ -140,4 +141,35 @@ func (p *optionsPanel) read() (rdp.Options, *ui.Edit, string) {
 		o.FixedHeight = h
 	}
 	return o, nil, ""
+}
+
+// resizeChoices are the entries of the resize mode list: the three modes,
+// and dynamic resolution that goes to full screen as soon as it connects.
+var resizeChoices = []struct {
+	text string
+	mode rdp.ResizeMode
+	full bool
+}{
+	{"Dynamic resolution", rdp.ResizeDynamic, false},
+	{"Dynamic full screen", rdp.ResizeDynamic, true},
+	{"Scaled", rdp.ResizeScaled, false},
+	{"Fixed size", rdp.ResizeFixed, false},
+}
+
+var resizeTexts = func() []string {
+	texts := make([]string, len(resizeChoices))
+	for i, c := range resizeChoices {
+		texts[i] = c.text
+	}
+	return texts
+}()
+
+// resizeIndex is the list entry for the options.
+func resizeIndex(o rdp.Options) int {
+	for i, c := range resizeChoices {
+		if c.mode == o.Resize && c.full == (o.FullScreen && o.Resize == rdp.ResizeDynamic) {
+			return i
+		}
+	}
+	return 0
 }

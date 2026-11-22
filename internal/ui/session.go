@@ -84,6 +84,7 @@ type sessionPage struct {
 
 	width, height int      // of the container
 	visible       bool     // the visible tab
+	wentFull      bool     // the connection's full screen option was applied
 	full          bool     // full screen as last seen in Layout
 	dpi           int      // DPI the bars were made for
 	have          sessRect // what the session was last resized to

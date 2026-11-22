@@ -58,6 +58,7 @@ type Options struct {
 	Ports         bool         `json:"ports"`
 	Keyboard      KeyboardMode `json:"keyboard"`
 	Resize        ResizeMode   `json:"resize"`
+	FullScreen    bool         `json:"fullScreen,omitempty"`  // go to full screen when connecting (the UI's part)
 	FixedWidth    int          `json:"fixedWidth,omitempty"`  // for ResizeFixed
 	FixedHeight   int          `json:"fixedHeight,omitempty"` // for ResizeFixed
 	Quality       Quality      `json:"quality"`

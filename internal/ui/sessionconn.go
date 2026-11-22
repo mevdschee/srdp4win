@@ -404,6 +404,16 @@ func (p *sessionPage) connectRDP() {
 	}
 	p.rdpLost, p.rdpTrouble = false, false
 	p.setState(stRDP)
+	// A connection set to full screen goes there before it connects, so the
+	// remote desktop starts at the screen's size and is not resized after the
+	// login. Only once: a reconnect stays where the user left the window.
+	if p.c.Options.FullScreen && !p.wentFull && p.visible {
+		p.wentFull = true
+		p.sh.SetFullScreen(true)
+	}
+	if p.dead {
+		return
+	}
 	p.applyRect(true)
 	cred := rdp.Credentials{User: p.c.RDPUser, Domain: p.c.RDPDomain, Password: p.password}
 	if err := p.sess.Connect(p.tun.Host(), p.tun.Port(), cred, p.c.Options); err != nil {
