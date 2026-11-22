@@ -99,16 +99,23 @@ func (me *mainWindow) removePage(p tabPage) {
 	slog.Info("tab closed", "tab", i, "title", p.Title())
 	wasActive := i == me.active
 	me.pages = append(me.pages[:i], me.pages[i+1:]...)
-	if i < me.active {
+	// Destroying the page's windows hands the focus to the main window, whose
+	// focus handler uses the active page: the index must be valid by then.
+	switch {
+	case i < me.active:
 		me.active--
+	case wasActive:
+		me.active = min(i, len(me.pages)-1)
 	}
+	me.removing = true
 	p.Layout(win.RECT{}, false)
 	p.Destroy()
+	me.removing = false
 	switch {
 	case len(me.pages) == 1:
 		me.activate(0)
 	case wasActive:
-		me.activate(min(i, len(me.pages)-1))
+		me.activate(me.active)
 	default:
 		me.rebuildTabs()
 	}

@@ -82,6 +82,7 @@ type mainWindow struct {
 	menuDepth int  // open menus: the shortcuts are off
 	checking  bool // an update check runs
 	closing   bool
+	removing  bool // a page is being destroyed: its windows give the focus away
 }
 
 // Run shows the main window and blocks until it is closed. version is the
@@ -155,7 +156,7 @@ func (me *mainWindow) events() {
 	// The window itself has no use for the focus (windigo hands it to the
 	// first child, the tab strip): it goes to the active page.
 	on.WmSetFocus(func(_ ui.WmSetFocus) {
-		if me.styled && !me.closing {
+		if me.styled && !me.closing && !me.removing && me.active < len(me.pages) {
 			me.pages[me.active].Activated()
 		}
 	})
