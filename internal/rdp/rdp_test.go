@@ -20,7 +20,7 @@ func TestPerformanceFlags(t *testing.T) {
 		{QualityBest, false, 0x100},
 		{QualityMedium, true, 0x1 | 0x2 | 0x4 | 0x20 | 0x80},
 		{QualityMedium, false, 0x1 | 0x2 | 0x4 | 0x20},
-		{QualityPoor, true, 0x1 | 0x2 | 0x4 | 0x8 | 0x20},
+		{QualityPoor, true, 0x1 | 0x2 | 0x4 | 0x8 | 0x20 | 0x80},
 		{QualityPoor, false, 0x1 | 0x2 | 0x4 | 0x8 | 0x20},
 	}
 	for _, c := range cases {
@@ -44,8 +44,9 @@ func TestEffectiveColorDepth(t *testing.T) {
 	if got := EffectiveColorDepth(o); got != 32 {
 		t.Errorf("unknown: %d", got)
 	}
-	o.Quality = QualityPoor
-	if got := EffectiveColorDepth(o); got != 16 {
+	// The quality preset does not touch the colour depth.
+	o.ColorDepth, o.Quality = 24, QualityPoor
+	if got := EffectiveColorDepth(o); got != 24 {
 		t.Errorf("poor: %d", got)
 	}
 }

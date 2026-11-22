@@ -131,10 +131,11 @@ makes sessions wait on each other inside one TCP stream.
   offers it, hardware decoded).
 - Bitmap cache and persistent bitmap cache on, RDP bulk compression on,
   `RedirectDirectX`/graphics pipeline left on.
-- Quality presets, as in Remmina. **Best** (default): font smoothing,
-  desktop composition, wallpaper, full window drag, animations, themes.
-  **Medium**: font smoothing and themes only. **Poor**: everything off,
-  16 bit colour. A preset is only a set of `PerformanceFlags`.
+- Quality presets, as in Remmina. **Best** (default): desktop composition,
+  wallpaper, full window drag, animations, themes. **Medium**: themes only.
+  **Poor**: every effect off. A preset is only a set of `PerformanceFlags`
+  and overrides nothing else: font smoothing, the redirections and the
+  colour depth each follow their own option in all three.
 - The control gets the real pixel size and the monitor's scale factor
   (`DesktopScaleFactor`, `DeviceScaleFactor`), so the picture is 1:1 and sharp
   and nothing is stretched in the default mode.

@@ -13,15 +13,16 @@ const (
 )
 
 // PerformanceFlags maps the quality preset and the font smoothing option to
-// the RDP performance flags. Best keeps every effect, medium keeps font
-// smoothing and themes, poor turns everything off (font smoothing too).
+// the RDP performance flags. Best keeps every effect, medium keeps the
+// themes, poor turns every effect off. Font smoothing is not part of the
+// preset: it follows its own option in all three.
 func PerformanceFlags(o Options) uint32 {
 	var f uint32
 	switch o.Quality {
 	case QualityMedium:
 		f = PerfDisableWallpaper | PerfDisableFullWindowDrag | PerfDisableMenuAnimations | PerfDisableCursorShadow
 	case QualityPoor:
-		return PerfDisableWallpaper | PerfDisableFullWindowDrag | PerfDisableMenuAnimations |
+		f = PerfDisableWallpaper | PerfDisableFullWindowDrag | PerfDisableMenuAnimations |
 			PerfDisableThemes | PerfDisableCursorShadow
 	default:
 		f = PerfDesktopComposition
@@ -32,12 +33,9 @@ func PerformanceFlags(o Options) uint32 {
 	return f
 }
 
-// EffectiveColorDepth is the colour depth to ask for: the option, or 16 bit
-// with the poor preset. Unknown values become 32.
+// EffectiveColorDepth is the colour depth to ask for: the option, whatever
+// the quality preset. Unknown values become 32.
 func EffectiveColorDepth(o Options) int {
-	if o.Quality == QualityPoor {
-		return 16
-	}
 	switch o.ColorDepth {
 	case 15, 16, 24, 32:
 		return o.ColorDepth
