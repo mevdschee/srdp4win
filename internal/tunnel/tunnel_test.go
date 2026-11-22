@@ -194,9 +194,9 @@ func TestStats(t *testing.T) {
 	conn := connect(t, tun)
 	echo(t, conn, make([]byte, 100000))
 	want := Stats{Conns: 1, Active: 1, BytesIn: 100000, BytesOut: 100000}
-	if s := tun.Stats(); s != want {
-		t.Fatalf("stats %+v, want %+v", s, want)
-	}
+	// The tunnel counts a buffer after writing it, so the last bytes can
+	// be here before they are counted.
+	waitFor(t, "the bytes to be counted", func() bool { return tun.Stats() == want })
 	conn.Close()
 	waitFor(t, "connection to end", func() bool { return tun.Stats().Active == 0 })
 	want.Active = 0
