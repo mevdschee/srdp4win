@@ -64,7 +64,7 @@ type Options struct {
 	Quality       Quality      `json:"quality"`
 	ColorDepth    int          `json:"colorDepth"` // 32, 24, 16 or 15
 	Admin         bool         `json:"admin"`      // connect to the administrative session
-	VerifyCert    bool         `json:"verifyCert"` // warn when the RDP certificate cannot be verified
+	VerifyCert    bool         `json:"verifyCert"` // Windows asks before trusting a new or changed RDP certificate
 }
 
 // DefaultOptions returns the settings of a new connection.
@@ -80,6 +80,7 @@ func DefaultOptions() Options {
 		FixedHeight:   1080,
 		Quality:       QualityBest,
 		ColorDepth:    32,
+		VerifyCert:    true,
 	}
 }
 

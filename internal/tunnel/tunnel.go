@@ -7,18 +7,21 @@ package tunnel
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
-// loopback is the address the tunnel listens on.
+// loopback is the address a tunnel without an identity listens on.
 const loopback = "127.0.0.1"
 
 // rdpPort is never used: mstscax refuses a loopback connection to it, as it
@@ -48,6 +51,21 @@ type Options struct {
 	// AnyProcess lets every local program connect, not only this process.
 	// The command-line tool sets it, since mstsc or xfreerdp connect there.
 	AnyProcess bool
+	// Identity names the far end of the tunnel; see the function Identity.
+	// With it the tunnel listens on a loopback address and port of its own,
+	// derived from the name and so the same every time. An RDP client
+	// remembers the certificate it trusted by the address it connects to:
+	// behind 127.0.0.1 every server looks like the same computer whose
+	// certificate keeps changing, behind an address of its own each server
+	// is remembered by itself. Empty is 127.0.0.1 and a random port.
+	Identity string
+}
+
+// Identity is the name of the far end of a tunnel: the SSH host ("host:port")
+// and the target behind it. The target alone does not say which machine it
+// is, localhost is another one behind every SSH host.
+func Identity(sshAddr, target string) string {
+	return strings.ToLower(sshAddr + " " + target)
 }
 
 // checkPeer reports whether the accepted connection local<-peer was made by
@@ -57,6 +75,7 @@ var checkPeer = ownProcess
 // Tunnel is a loopback listener that forwards to one target.
 type Tunnel struct {
 	ln     *net.TCPListener
+	host   string
 	port   int
 	target string
 	opts   Options
@@ -79,7 +98,7 @@ type Tunnel struct {
 	busy      int                   // connections open or being opened
 }
 
-// Open listens on a random loopback port (never 3389) and forwards accepted
+// Open listens on a loopback port (never 3389) and forwards accepted
 // connections through d to target ("host:port" as seen from the SSH host).
 // A new tunnel accepts; see SetAccepting.
 func Open(d Dialer, target string) (*Tunnel, error) {
@@ -94,13 +113,14 @@ func OpenWith(d Dialer, target string, o Options) (*Tunnel, error) {
 	if _, _, err := net.SplitHostPort(target); err != nil {
 		return nil, fmt.Errorf("tunnel target %q: %w", target, err)
 	}
-	ln, err := listen()
+	ln, err := listen(o.Identity)
 	if err != nil {
 		return nil, fmt.Errorf("tunnel listen: %w", err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	t := &Tunnel{
 		ln:        ln,
+		host:      ln.Addr().(*net.TCPAddr).IP.String(),
 		port:      ln.Addr().(*net.TCPAddr).Port,
 		target:    target,
 		opts:      o,
@@ -117,8 +137,39 @@ func OpenWith(d Dialer, target string, o Options) (*Tunnel, error) {
 	return t, nil
 }
 
-// listen opens a random loopback port that is not the RDP port.
-func listen() (*net.TCPListener, error) {
+// listen opens the tunnel's port. With an identity that is the endpoint
+// belonging to it; a random port on the same address when the port is taken
+// (a second tunnel to the same far end); and 127.0.0.1 where the address
+// cannot be used at all.
+func listen(identity string) (*net.TCPListener, error) {
+	if identity != "" {
+		ip, port := endpoint(identity)
+		for _, p := range []int{port, 0} {
+			ln, err := listenOn(ip, p)
+			if err == nil {
+				return ln, nil
+			}
+			slog.Info("tunnel: own endpoint not free", "listen", net.JoinHostPort(ip.String(), strconv.Itoa(p)), "err", err)
+		}
+	}
+	return listenOn(net.ParseIP(loopback), 0)
+}
+
+// endpoint is the loopback address and port that belong to an identity. All
+// of 127.0.0.0/8 is the local computer, so a hash of the identity picks one
+// of 16 million addresses, from 127.1.0.1 to 127.254.255.254. Two identities
+// on one address would only mean being asked about a certificate again. The
+// port is fixed as well, in case a client remembers by address and port.
+func endpoint(identity string) (net.IP, int) {
+	sum := sha256.Sum256([]byte(identity))
+	ip := net.IPv4(127, 1+sum[0]%254, sum[1], 1+sum[2]%254)
+	port := 20000 + int(binary.BigEndian.Uint16(sum[3:5]))%20000
+	return ip, port
+}
+
+// listenOn listens on a loopback address. Port 0 is a random port that is
+// not the RDP port.
+func listenOn(ip net.IP, port int) (*net.TCPListener, error) {
 	var skipped []*net.TCPListener
 	defer func() {
 		for _, ln := range skipped {
@@ -126,7 +177,7 @@ func listen() (*net.TCPListener, error) {
 		}
 	}()
 	for {
-		ln, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: net.ParseIP(loopback)})
+		ln, err := net.ListenTCP("tcp4", &net.TCPAddr{IP: ip, Port: port})
 		if err != nil {
 			return nil, err
 		}
@@ -139,13 +190,13 @@ func listen() (*net.TCPListener, error) {
 }
 
 // Host is the loopback address to give to the RDP control.
-func (t *Tunnel) Host() string { return loopback }
+func (t *Tunnel) Host() string { return t.host }
 
 // Port is the listening port.
 func (t *Tunnel) Port() int { return t.port }
 
 // Addr is Host:Port.
-func (t *Tunnel) Addr() string { return net.JoinHostPort(loopback, strconv.Itoa(t.port)) }
+func (t *Tunnel) Addr() string { return net.JoinHostPort(t.host, strconv.Itoa(t.port)) }
 
 // SetAccepting turns accepting on or off. While off, and while a connection
 // is open, new connections are closed at once.

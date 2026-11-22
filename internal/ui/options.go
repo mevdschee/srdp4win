@@ -74,7 +74,7 @@ func newOptionsPanel(wnd ui.Parent, x, y int, o rdp.Options) *optionsPanel {
 	}
 	p.depth = combo(9, "Colour depth", depth, "32 bit", "24 bit", "16 bit", "15 bit")
 	p.admin = checkBox(wnd, "&Admin session", lx, row(10), optionsWidth, o.Admin)
-	p.verify = checkBox(wnd, "&Verify the RDP certificate (warns: the name never matches)", lx, row(11), optionsWidth, o.VerifyCert)
+	p.verify = checkBox(wnd, "&Verify the RDP certificate", lx, row(11), optionsWidth, o.VerifyCert)
 
 	p.drives.On().BnClicked(p.update)
 	p.resize.On().CbnSelChange(p.update)

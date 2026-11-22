@@ -117,7 +117,7 @@ func (p *sessionPage) start() {
 	p.reason, p.noDynamic, p.rdpLost = "", false, false
 	p.setState(stSSH)
 	p.dialing = true
-	ctx, target := p.ctx, p.c.RDPTarget()
+	ctx, target, sshAddr := p.ctx, p.c.RDPTarget(), p.c.SSHAddr()
 	var cancelled atomic.Bool
 	cfg := p.sshConfig(ctx, &cancelled)
 	go func() {
@@ -134,7 +134,9 @@ func (p *sessionPage) start() {
 			return
 		}
 		p.post(func() { p.setState(stTunnel) })
-		tun, err := tunnel.Open(client, target)
+		// An address of its own for this RDP host, so that the control
+		// remembers the host's certificate and not that of the last one.
+		tun, err := tunnel.OpenWith(client, target, tunnel.Options{Identity: tunnel.Identity(sshAddr, target)})
 		p.sh.Post(func() {
 			if p.dead {
 				if tun != nil {

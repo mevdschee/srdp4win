@@ -100,6 +100,71 @@ func TestListensOnLoopback(t *testing.T) {
 	}
 }
 
+// openAs opens a tunnel with an identity to an echo server.
+func openAs(t *testing.T, identity string) *Tunnel {
+	t.Helper()
+	tun, err := OpenWith(directDialer{}, sshtest.Echo(t), Options{Identity: identity})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { tun.Close() })
+	return tun
+}
+
+func TestIdentityEndpoint(t *testing.T) {
+	desk := Identity("Jump.example:22", "desk:3389")
+	if desk != Identity("jump.example:22", "DESK:3389") {
+		t.Fatal("the identity depends on the case")
+	}
+	first := openAs(t, desk)
+	ip := net.ParseIP(first.Host())
+	if !ip.IsLoopback() || first.Host() == loopback {
+		t.Fatalf("host %q", first.Host())
+	}
+	wantIP, wantPort := endpoint(desk)
+	if !ip.Equal(wantIP) || first.Port() != wantPort {
+		t.Fatalf("listening on %s, want %s:%d", first.Addr(), wantIP, wantPort)
+	}
+	// It forwards like any tunnel.
+	conn := connect(t, first)
+	conn.Write([]byte("ping"))
+	buf := make([]byte, 4)
+	if _, err := io.ReadFull(conn, buf); err != nil || string(buf) != "ping" {
+		t.Fatalf("echo: %q, %v", buf, err)
+	}
+	conn.Close()
+
+	// A second tunnel to the same far end: the same address, another port.
+	second := openAs(t, desk)
+	if second.Host() != first.Host() || second.Port() == first.Port() || second.Port() == 3389 {
+		t.Fatalf("second tunnel on %s, first on %s", second.Addr(), first.Addr())
+	}
+	// The same target behind another SSH host is another computer.
+	other := openAs(t, Identity("other.example:22", "desk:3389"))
+	if other.Host() == first.Host() {
+		t.Fatalf("two far ends on %s", other.Host())
+	}
+	// Opened again later, it is where it was.
+	first.Close()
+	again := openAs(t, desk)
+	if again.Addr() != first.Addr() {
+		t.Fatalf("reopened on %s, was on %s", again.Addr(), first.Addr())
+	}
+}
+
+func TestEndpointRange(t *testing.T) {
+	for i := 0; i < 2000; i++ {
+		ip, port := endpoint(Identity("jump:22", "host"+strconv.Itoa(i)+":3389"))
+		v4 := ip.To4()
+		if v4 == nil || v4[0] != 127 || v4[1] == 0 || v4[1] == 255 || v4[3] == 0 || v4[3] == 255 {
+			t.Fatalf("address %v", ip)
+		}
+		if port < 20000 || port > 39999 {
+			t.Fatalf("port %d", port)
+		}
+	}
+}
+
 func TestOpenRejectsBadInput(t *testing.T) {
 	if _, err := Open(nil, "localhost:3389"); err == nil {
 		t.Fatal("nil dialer accepted")

@@ -24,6 +24,9 @@ thing.
   `~/.ssh/known_hosts`: an unknown key is shown with its fingerprint to trust,
   a changed key is refused. SSH passwords and key passphrases are never
   stored.
+- **RDP certificate check:** optional. Every RDP host gets a loopback
+  address of its own, so Windows remembers the certificate you trusted for
+  that host and only asks again when it changes.
 - **Saved RDP password:** optional, and encrypted with DPAPI so only your
   Windows account can read it. The password is handed to the session, so
   network level authentication works without another prompt.

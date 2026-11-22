@@ -3,9 +3,11 @@
 //
 //	srdp-cli [-p sshport] [-i keyfile] user@sshhost rdphost[:port]
 //
-// It prints the loopback address to connect to (mstsc /v:127.0.0.1:port or
-// xfreerdp /v:127.0.0.1:port) and runs until Ctrl+C, then prints what went
-// through. The RDP host is an address as seen from the SSH host.
+// It prints the loopback address to connect to (mstsc /v:address:port or
+// xfreerdp /v:address:port) and runs until Ctrl+C, then prints what went
+// through. The address is the one the app uses for the same RDP host, so a
+// certificate trusted in one is trusted in the other. The RDP host is an
+// address as seen from the SSH host.
 package main
 
 import (
@@ -17,6 +19,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -74,7 +77,8 @@ func main() {
 
 	// Another program connects here, so the tunnel is open to every local
 	// process for as long as this tool runs.
-	t, err := tunnel.OpenWith(c, target, tunnel.Options{AnyProcess: true})
+	sshAddr := net.JoinHostPort(host, strconv.Itoa(cfg.Port))
+	t, err := tunnel.OpenWith(c, target, tunnel.Options{AnyProcess: true, Identity: tunnel.Identity(sshAddr, target)})
 	if err != nil {
 		c.Close()
 		fail(err)

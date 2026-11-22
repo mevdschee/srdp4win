@@ -58,7 +58,8 @@ the session behind a small interface with a second, fake implementation (see
 
 1. SSH: connect and log in to the SSH server (`golang.org/x/crypto/ssh`), host
    key checked against `~/.ssh/known_hosts`.
-2. Tunnel: listen on a random port on a loopback address. Every accepted
+2. Tunnel: listen on the loopback address and port that belong to this RDP
+   host (see "Tunnel details"). Every accepted
    connection is forwarded through a `direct-tcpip` channel to the RDP host,
    an address as seen from the SSH host (`localhost` when both are the same
    machine).
@@ -72,8 +73,19 @@ makes sessions wait on each other inside one TCP stream.
 
 ### Tunnel details
 
-- Loopback only, random port, never 3389 (mstscax refuses a loopback
-  connection that looks like the local console).
+- Loopback only, never port 3389 (mstscax refuses a loopback connection that
+  looks like the local console).
+- Every RDP host has a loopback address of its own. The control remembers a
+  trusted certificate by the address it connects to
+  (`HKCU\Software\Microsoft\Terminal Server Client\Servers\<address>`,
+  value `CertHash`), so behind `127.0.0.1` all hosts would be one computer
+  whose certificate keeps changing. All of `127.0.0.0/8` is the local
+  computer, so a hash of the SSH host and the RDP target picks an address
+  from `127.1.0.1` to `127.254.255.254` and a port from 20000 to 39999, the
+  same every time. The SSH host is part of it because `localhost` is another
+  machine behind every SSH host. A second tab to the same host gets a random
+  port on the same address; where the address cannot be used the tunnel falls
+  back to `127.0.0.1` with a random port.
 - The listener accepts while the SSH connection is up (the control reconnects
   by itself on the same port) and refuses while it is down, one connection at
   a time. On Windows the peer's process ID is checked
@@ -122,7 +134,7 @@ makes sessions wait on each other inside one TCP stream.
 | Quality | best | see "Performance" |
 | Colour depth | 32 bit | `ColorDepth` |
 | Admin session | off | `ConnectToAdministerServer` |
-| Verify RDP certificate | off | `AuthenticationLevel` 0, or 2 (warn) |
+| Verify RDP certificate | on | `AuthenticationLevel` 0, or 2 (Windows asks, once per host) |
 
 ### Performance
 
@@ -343,6 +355,10 @@ checklist below.
 - The password hand-over logs in with NLA without a Windows prompt; a wrong
   password is asked again in our dialog; an empty one shows the server's
   logon screen.
+- Verify RDP certificate: the warning has "Don't ask me again for
+  connections to this computer"; once ticked the same host connects without
+  a warning, also in a new tab and after a restart, and another host still
+  asks. The log line "tunnel open" shows the host's own address.
 - Dynamic resize follows the window and full screen; an old server or xrdp
   falls back to Scaled.
 - Full screen: Ctrl+Alt+Break toggles it, Windows key combinations go to the
@@ -358,9 +374,14 @@ checklist below.
 ## Known weaknesses (accepted)
 
 - The control connects to a loopback address, so the RDP server's certificate
-  can never match the name. Certificate warnings are therefore off by
-  default: the SSH host key authenticates the path to the SSH server, the hop
-  from there to the RDP target is trusted like the network it is on.
+  can never match the name: with "Verify RDP certificate" Windows always
+  reports a name mismatch the first time. Ticking "Don't ask me again for
+  connections to this computer" then trusts that certificate for that host
+  only (it has its own loopback address), and Windows asks again when it
+  changes. The control cannot be told the real name: its
+  `UserSpecifiedServerName` is an internal property. With the check switched
+  off, the SSH host key still authenticates the path to the SSH server, but
+  the hop from there to the RDP target is trusted like the network it is on.
 - With NLA the login uses NTLM, not Kerberos (there is no service name for a
   loopback address).
 - No UDP transport, so on lossy links the picture is less smooth than a
