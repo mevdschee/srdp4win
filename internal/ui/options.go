@@ -65,7 +65,7 @@ func newOptionsPanel(wnd ui.Parent, x, y int, o rdp.Options) *optionsPanel {
 	p.fixedW = number(fx, 7, 70, o.FixedWidth)
 	p.byLabel = label(wnd, "x", fx+78, row(7), 12)
 	p.fixedH = number(fx+94, 7, 70, o.FixedHeight)
-	p.quality = combo(8, "Quality", int(o.Quality), "Best", "Medium", "Poor")
+	p.quality = combo(8, "Quality", int(o.Quality), "Best (slowest)", "Medium", "Poor (fastest)")
 	depth := 0
 	for i, d := range colorDepths {
 		if d == o.ColorDepth {

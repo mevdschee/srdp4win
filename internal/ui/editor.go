@@ -97,9 +97,10 @@ func editConnection(parent ui.Parent, title string, c config.Connection) (config
 	head("RDP host (as seen from the SSH host)", lx)
 	rdpHost, rdpPort := hostPort(c.RDPHost, c.RDPPort, 3389)
 	rdpUser := edit("User", c.RDPUser, 0)
-	domain := edit("Domain", c.RDPDomain, 0)
 	password := edit("Password", c.RDPPassword, co.ES_PASSWORD)
 	savePassword := checkBox(wnd, "&Save password", fx, y, fw, c.SavePassword)
+	y += 28
+	domain := edit("Domain", c.RDPDomain, 0)
 
 	y = 12
 	head("Options", rx)
