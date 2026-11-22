@@ -221,6 +221,7 @@ func (s *session) Connect(host string, port int, cred rdp.Credentials, o rdp.Opt
 	// Full screen is ours: the control only asks for it.
 	adv.putInt("ContainerHandledFullScreen", 1)
 	adv.putBool("DisplayConnectionBar", false)
+	adv.putBool("PinConnectionBar", false)
 	adv.putBool("GrabFocusOnConnect", false)
 	if s.fullScreen {
 		s.putFullScreen(true)
@@ -533,6 +534,9 @@ func (s *session) putFullScreen(on bool) {
 	s.settingFS = true
 	s.client.putBool("FullScreen", on)
 	s.settingFS = false
+	if on {
+		hideConnectionBar(s.hwnd)
+	}
 }
 
 func (s *session) SendKeys(k rdp.Keys) {
@@ -683,6 +687,9 @@ func (s *session) event(id int32, args []int) {
 			return
 		}
 		s.state = stateConnected
+		if s.fullScreen {
+			hideConnectionBar(s.hwnd) // the control shows it when it connects
+		}
 		if s.ev.Connected != nil {
 			s.ev.Connected()
 		}

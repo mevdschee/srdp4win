@@ -184,7 +184,10 @@ Three modes, switchable from the toolbar while connected, like Remmina:
   control keeps the same session and, in dynamic mode, resizes the remote
   desktop to the monitor. Leaving full screen restores the window and resizes
   back.
-- The control's own blue connection bar is off. Instead there is our
+- The control's own blue connection bar is off (`DisplayConnectionBar`), and
+  because newer controls show it in full screen anyway, its window (class
+  `BBarWindowClass`) is hidden whenever the session goes to full screen,
+  connects or logs in. Instead there is our
   **floating toolbar**: a small owned popup window at the top centre of the
   screen (a child window cannot sit on top of the control reliably).
   - Hidden, it leaves a 2 px strip at the top edge. Moving the mouse onto the

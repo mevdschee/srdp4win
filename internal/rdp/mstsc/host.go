@@ -30,6 +30,12 @@ var (
 	procSetFocus        = user32.NewProc("SetFocus")
 	procSetTimer        = user32.NewProc("SetTimer")
 	procKillTimer       = user32.NewProc("KillTimer")
+
+	procEnumChildWindows   = user32.NewProc("EnumChildWindows")
+	procEnumThreadWindows  = user32.NewProc("EnumThreadWindows")
+	procGetClassNameW      = user32.NewProc("GetClassNameW")
+	procIsWindowVisible    = user32.NewProc("IsWindowVisible")
+	procGetCurrentThreadId = kernel32.NewProc("GetCurrentThreadId")
 )
 
 const (
@@ -149,4 +155,35 @@ func after(ms int, f func()) (cancel func()) {
 			procKillTimer.Call(0, id)
 		}
 	}
+}
+
+// barClass is the window class of the control's own connection bar, the blue
+// bar at the top of a full screen session.
+const barClass = "BBarWindowClass"
+
+// hideBarProc hides a window when it is a connection bar. One callback for
+// all sessions: Go can only make a limited number of them.
+var hideBarProc = sync.OnceValue(func() uintptr {
+	return syscall.NewCallback(func(hwnd, _ uintptr) uintptr {
+		var name [32]uint16
+		n, _, _ := procGetClassNameW.Call(hwnd, uintptr(unsafe.Pointer(&name[0])), uintptr(len(name)))
+		if syscall.UTF16ToString(name[:n]) == barClass {
+			if visible, _, _ := procIsWindowVisible.Call(hwnd); visible != 0 {
+				slog.Info("rdp control: connection bar hidden")
+			}
+			procShowWindow.Call(hwnd, swHide)
+		}
+		return 1 // go on
+	})
+})
+
+// hideConnectionBar hides the control's connection bar: newer controls show
+// it in full screen whatever DisplayConnectionBar says. It is a window of
+// the UI thread, inside the control or on its own, and we never want one,
+// so every one found is hidden.
+func hideConnectionBar(control uintptr) {
+	proc := hideBarProc()
+	procEnumChildWindows.Call(control, proc, 0)
+	thread, _, _ := procGetCurrentThreadId.Call()
+	procEnumThreadWindows.Call(thread, proc, 0)
 }
