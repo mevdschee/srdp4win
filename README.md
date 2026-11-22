@@ -3,6 +3,8 @@
 A remote desktop client for Windows that only connects through SSH, written in
 Go with [Windigo](https://github.com/rodrigocfd/windigo).
 
+![srdp4win](screenshot.png)
+
 A connection has two addresses: the SSH host to log in to and the RDP host to
 reach from there. srdp4win logs in, opens a tunnel and shows the remote desktop
 in a tab. The RDP port never has to be reachable from the internet: only SSH
