@@ -1,7 +1,9 @@
 # srdp4win
 
-A remote desktop client for Windows that only connects through SSH, written in
-Go with [Windigo](https://github.com/rodrigocfd/windigo).
+Remote desktop without opening the RDP port to the internet: srdp4win only
+connects through SSH, so a server needs nothing exposed but SSH. A remote
+desktop client for Windows, written in Go with
+[Windigo](https://github.com/rodrigocfd/windigo).
 
 ![srdp4win](screenshot.png)
 
@@ -71,6 +73,24 @@ Run srdp4win from the Start menu and add a connection:
 Double-click the connection to open it. Use "Check for updates" in the "..."
 menu to get new versions.
 
+To use it without installing, download `srdp4win-<version>-amd64.exe` instead
+and run it from anywhere. It is the same program the installer installs. The
+settings still go to `%APPDATA%\srdp4win`, and "Check for updates" opens the
+download page instead of installing. For Windows on ARM there is
+`srdp4win-<version>-arm64.exe`, a native build that is only available as a
+portable exe; the installer works there too, but runs the amd64 build
+emulated.
+
+Each release has a `SHA256SUMS` file. To check a download, compare its hash
+with the one listed there, for example in PowerShell:
+
+    Get-FileHash srdp4win-<version>-amd64.exe
+
+The files are not signed, so SmartScreen and some virus scanners may warn
+about them, as they do for many unsigned programs. If one does, check the
+hash first. The source and the build script are in this repository, so you can
+also build the exe yourself.
+
 ## Data
 
 Connections are saved in `%APPDATA%\srdp4win\connections.dat`, encrypted with
@@ -86,7 +106,7 @@ go install github.com/tc-hib/go-winres@latest
 go test ./...              # the plain Go parts, on Linux
 GOOS=windows go vet ./...  # the Windows parts, at compile level
 ./run.sh                   # build srdp4win.exe and run it with Wine
-./release.sh [minor]       # build the MSI and publish a GitHub release
+./release.sh [minor]       # build the MSI and the portable exes, publish a GitHub release
 ```
 
 There is no cgo and no bundled DLL: the result is a single `srdp4win.exe`.

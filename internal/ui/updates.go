@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/mevdschee/srdp4win/internal/logging"
 	"github.com/mevdschee/srdp4win/internal/update"
@@ -57,7 +58,27 @@ func (me *mainWindow) checkForUpdates() {
 	}()
 }
 
+// installed reports whether this is the copy the MSI installed, in
+// %LOCALAPPDATA%\Programs\srdp4win, and not the portable exe. A portable copy
+// cannot update itself: the MSI would install a second copy next to it.
+func installed() bool {
+	exe, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	dir := filepath.Join(os.Getenv("LOCALAPPDATA"), "Programs", "srdp4win")
+	return strings.EqualFold(filepath.Clean(filepath.Dir(exe)), filepath.Clean(dir))
+}
+
 func (me *mainWindow) offerUpdate(r update.Release) {
+	if !installed() {
+		if ui.MsgOkCancel(me.wnd, "Update", "srdp4win "+r.Version+" is available",
+			fmt.Sprintf("You have %s. This copy is not installed, so it cannot update itself. Open the download page?",
+				me.version), "Open") {
+			openURL(me.wnd.Hwnd(), repoURL+"/releases/latest")
+		}
+		return
+	}
 	text := fmt.Sprintf("You have %s. Download and install %s now? %s closes during the installation.",
 		me.version, r.Version, appName)
 	if me.TabCount() > 0 {
