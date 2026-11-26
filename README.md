@@ -60,9 +60,8 @@ tunnel. Spanning several monitors is not supported.
 You need to be on Windows 11. Install `srdp4win-<version>-amd64.msi` from the
 [releases](https://github.com/mevdschee/srdp4win/releases). It installs for
 your user only, in `%LOCALAPPDATA%\Programs\srdp4win`, and does not need admin
-rights. srdp4win itself never asks for them either. The installer is not
-signed, so Windows SmartScreen may ask you to confirm ("More info", "Run
-anyway").
+rights. srdp4win itself never asks for them either. The installer is signed by
+Maussoft B.V., see "Code signing" below.
 
 Run srdp4win from the Start menu and add a connection:
 
@@ -86,10 +85,15 @@ with the one listed there, for example in PowerShell:
 
     Get-FileHash srdp4win-<version>-amd64.exe
 
-The files are not signed, so SmartScreen and some virus scanners may warn
-about them, as they do for many unsigned programs. If one does, check the
-hash first. The source and the build script are in this repository, so you can
-also build the exe yourself.
+### Code signing
+
+Since version 0.1.12 the installer and the exes are signed with a Certum code
+signing certificate issued to Maussoft B.V. To check, right-click the file in
+Explorer, choose Properties and open the "Digital Signatures" tab. SmartScreen
+may still warn about a new release until enough people have downloaded it
+("More info", "Run anyway"). Do not run a file that is not signed by Maussoft
+B.V. The source and the build script are in this repository, so you can also
+build the exe yourself.
 
 ## Data
 
@@ -109,11 +113,14 @@ GOOS=windows go vet ./...  # the Windows parts, at compile level
 ./release.sh [minor]       # build the MSI and the portable exes, publish a GitHub release
 ```
 
-There is no cgo and no bundled DLL: the result is a single `srdp4win.exe`.
-The icon, manifest (visual styles, per-monitor DPI awareness, no elevation)
-and version info are compiled from `winres/` into a `.syso` file, which is not
-committed. The app icon is `internal/icons/app/icon.svg`, rendered into `winres/` by `go run ./tools/genicon` (needs Inkscape). The
-installer is defined in `installer/srdp4win.wxs`.
+There is no cgo and no bundled DLL: the result is a single `srdp4win.exe`. The
+icon, manifest (visual styles, per-monitor DPI awareness, no elevation) and
+version info are compiled from `winres/` into a `.syso` file, which is not
+committed. The app icon is `internal/icons/app/icon.svg`, rendered into
+`winres/` by `go run ./tools/genicon` (needs Inkscape). The installer is
+defined in `installer/srdp4win.wxs`. `release.sh` signs the exes and the MSI
+with jsign and the Certum certificate in SimplySign; start SimplySign Desktop
+and connect it first. The settings are at its top.
 
 ## Testing under Wine
 
