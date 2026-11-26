@@ -38,16 +38,16 @@
     "#1": {
       "0000": {
         "fixed": {
-          "file_version": "0.1.11.12",
-          "product_version": "0.1.11.12"
+          "file_version": "0.1.12.13",
+          "product_version": "0.1.12.13"
         },
         "info": {
           "0409": {
             "FileDescription": "Remote desktop over SSH for Windows",
-            "FileVersion": "0.1.11",
+            "FileVersion": "0.1.12",
             "OriginalFilename": "srdp4win.exe",
             "ProductName": "srdp4win",
-            "ProductVersion": "0.1.11"
+            "ProductVersion": "0.1.12"
           }
         }
       }
