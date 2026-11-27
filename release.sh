@@ -47,7 +47,7 @@ if ! command -v ssctl >/dev/null || ! ssctl info >/dev/null; then
 	exit 1
 fi
 sign() {
-	ssctl sign "$1"
+	ssctl sign --name srdp4win --url https://github.com/mevdschee/srdp4win "$1"
 }
 
 # Bump the version.
