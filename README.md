@@ -119,8 +119,9 @@ version info are compiled from `winres/` into a `.syso` file, which is not
 committed. The app icon is `internal/icons/app/icon.svg`, rendered into
 `winres/` by `go run ./tools/genicon` (needs Inkscape). The installer is
 defined in `installer/srdp4win.wxs`. `release.sh` signs the exes and the MSI
-with jsign and the Certum certificate in SimplySign; start SimplySign Desktop
-and connect it first. The settings are at its top.
+with [ssctl](https://github.com/mevdschee/simplysign-go) and the Certum
+certificate in SimplySign; run `ssctl login` first and log in with a token from
+the SimplySign mobile app. SimplySign Desktop is not needed.
 
 ## Testing under Wine
 
